@@ -1,4 +1,6 @@
 import Reveal from '@/components/Reveal'
+import TextReveal from '@/components/TextReveal'
+import { efek } from '@/lib/efek'
 import { cn } from '@/lib/utils'
 
 /**
@@ -42,7 +44,11 @@ export function EditorialHeading({
           center && 'mx-auto',
         )}
       >
-        {judul}
+        {efek.reveal && typeof judul === 'string' ? (
+          <TextReveal teks={judul} />
+        ) : (
+          judul
+        )}
       </h2>
 
       {deskripsi ? (
@@ -52,7 +58,11 @@ export function EditorialHeading({
             center && 'mx-auto',
           )}
         >
-          {deskripsi}
+          {efek.reveal && typeof deskripsi === 'string' ? (
+            <TextReveal teks={deskripsi} delay={120} stagger={38} />
+          ) : (
+            deskripsi
+          )}
         </p>
       ) : null}
     </Reveal>

@@ -118,6 +118,8 @@
   /* Halo di belakang garuda: berdenyut halus sinkron float — lebih terang
      & sedikit membesar saat garuda naik. */
   --animate-halo-napas: halo-napas 14s ease-in-out infinite;
+  /* Ticker mono di bawah hero: lintasan tak berujung (dipakai hemat, satu bilah). */
+  --animate-marquee: marquee 46s linear infinite;
 
   @keyframes float {
     0%,
@@ -208,7 +210,19 @@
       transform: scale(1.06);
     }
   }
-}@layer base {
+
+  /* Ticker: digeser -50% (lebar satu salinan) lalu diulang — dua salinan
+     identik berdampingan membuat loop terasa tanpa jeda. */
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+@layer base {
   * {
     @apply border-border outline-ring/50;
   }
@@ -250,6 +264,7 @@
     .animate-spin-reverse,
     .animate-pulse-ring,
     .animate-shimmer,
+    .animate-marquee,
     .logomark-draw,
     .logomark-pop {
       animation: none !important;

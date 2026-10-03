@@ -21,11 +21,22 @@ export const meta = {
   labelJelajahi: 'Jelajahi analisis',
   // Label untuk indikator progres baca di header.
   progresBaca: 'Progres baca halaman',
+  // Ticker mono di bawah hero. HANYA kata kunci yang sudah muncul di konten
+  // (tidak ada fakta/angka baru) — fungsinya mengikat pembaca ke tema.
+  marquee: [
+    'Smart Forest City',
+    'Net-Zero 2045',
+    'Kalimantan Timur',
+    'Indonesia-sentris',
+    'Kawasan Inti Pusat Pemerintahan',
+    'Otorita IKN',
+  ],
   section: {
     latarBelakang: {
       judul: 'Latar Belakang',
       deskripsi:
         'Alasan di balik pemindahan ibu kota negara dari Jakarta ke Kalimantan Timur.',
+
       // Angka sorotan — SEMUA nilainya diambil dari deskripsi latarBelakang di
       // bawah (bukan fakta/angka baru), hanya disajikan ulang sebagai chip.
       stats: [
@@ -51,14 +62,18 @@ export const meta = {
     },
   },
   footer: {
-    judulSumber: 'Sumber & Referensi',
-    catatanSumber:
-      'Placeholder — daftar referensi resmi akan ditambahkan di sini.',
-    // Placeholder; ganti dengan tajuk/tautan referensi yang sebenarnya.
-    sumber: [
-      { label: 'Referensi 1 (placeholder)', href: '#' },
-      { label: 'Referensi 2 (placeholder)', href: '#' },
-      { label: 'Referensi 3 (placeholder)', href: '#' },
+    judulAnggota: 'Anggota Kelompok',
+    deskripsiAnggota:
+      'Tim penyusun dan pengembang media pembelajaran Analisis SWOT Ibu Kota Nusantara.',
+    anggota: [
+      { id: 1, nama: 'Amaris Wursita', role: 'Anggota Kelompok' },
+      { id: 2, nama: 'Krisna Mandala Putra', role: 'Anggota Kelompok' },
+      { id: 3, nama: 'Lathifa Ramadanti Putri', role: 'Anggota Kelompok' },
+      { id: 4, nama: 'Lukas Danu Saptaji', role: 'Anggota Kelompok' },
+      { id: 5, nama: 'Rieva Asancaya Aneela El Daviq', role: 'Anggota Kelompok' },
+      { id: 6, nama: 'Restu Galih Pratama', role: 'Anggota Kelompok' },
+      { id: 7, nama: 'Satrya Panji Atmoko Siregar', role: 'Anggota Kelompok' },
+      { id: 8, nama: 'Theodora Ovrisa Ersalina', role: 'Anggota Kelompok' },
     ],
     kredit: 'Dibuat sebagai media pembelajaran. Konten disusun dari data yang tersedia.',
   },

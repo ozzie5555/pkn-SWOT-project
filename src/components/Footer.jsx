@@ -1,18 +1,69 @@
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, User } from 'lucide-react'
 
+import KartuAnggota from '@/components/KartuAnggota'
 import Logomark from '@/components/Logomark'
 import { Rule } from '@/components/Rule'
 import { meta } from '@/data'
+import { efek } from '@/lib/efek'
 
-export default function Footer() {
-  const { judulSumber, catatanSumber, sumber, kredit } = meta.footer
+/**
+ * Grid anggota: kartu + spotlight + monogram.
+ *
+ * Bila efek "anggota" dimatikan (PanelEfek / `?efek=none`), jatuh ke kartu
+ * netral dengan ikon generik — versi asli sebelum efek ditambahkan.
+ */
+function GridAnggota({ items }) {
+  if (!efek.anggota) {
+    return (
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-5">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="border-border/80 bg-card/60 shadow-xs group relative flex items-center gap-4 overflow-hidden rounded-2xl border p-4 backdrop-blur-xs transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md sm:p-5"
+          >
+            {/* Avatar Icon */}
+            <div className="border-primary/20 bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-xl border transition-transform duration-300 group-hover:scale-105">
+              <User className="size-5.5" aria-hidden="true" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-foreground group-hover:text-primary text-sm leading-snug font-semibold transition-colors">
+                {item.nama}
+              </p>
+              <p className="label-mono text-muted-foreground mt-1 text-xs">
+                {item.role}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
-    <footer className="paper-grain relative overflow-hidden">
+    <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-5">
+      {items.map((item, i) => (
+        <KartuAnggota
+          key={item.id}
+          nomor={i + 1}
+          nama={item.nama}
+          role={item.role}
+          delay={(i % 4) * 80}
+        />
+      ))}
+    </div>
+  )
+}
+
+export default function Footer() {
+  const { judulAnggota, deskripsiAnggota, anggota, kredit } = meta.footer
+
+  return (
+    <footer id="anggota" className="paper-grain relative overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 py-16 lg:px-10 lg:py-20">
-        <div className="grid gap-12 lg:grid-cols-12">
-          {/* Kolom kiri: identitas + catatan sumber */}
-          <div className="lg:col-span-7">
+        {/* Identitas & Judul Anggota Kelompok */}
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
             <div className="flex items-center gap-3">
               <Logomark animated={false} className="text-primary size-8" />
               <div className="leading-none">
@@ -23,37 +74,16 @@ export default function Footer() {
               </div>
             </div>
 
-            <h2 className="label-mono text-muted-foreground mt-10">
-              {judulSumber}
+            <h2 className="label-mono text-foreground mt-8 text-lg font-semibold tracking-tight sm:text-xl">
+              {judulAnggota}
             </h2>
-            <p className="text-muted-foreground mt-4 max-w-lg text-sm leading-relaxed text-pretty">
-              {catatanSumber}
+            <p className="text-muted-foreground mt-2 max-w-xl text-sm leading-relaxed text-pretty">
+              {deskripsiAnggota}
             </p>
           </div>
-
-          {/* Kolom kanan: daftar sumber */}
-          <div className="lg:col-span-5">
-            <h2 className="label-mono text-muted-foreground">Sumber</h2>
-            <ul className="divide-border mt-4 divide-y">
-              {sumber.map((s) => (
-                <li key={s.label}>
-                  <a
-                    href={s.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-foreground group flex items-center justify-between gap-4 py-3 text-sm transition-colors"
-                  >
-                    <span className="text-pretty">{s.label}</span>
-                    <ArrowUp
-                      className="size-4 shrink-0 rotate-45 opacity-0 transition-opacity group-hover:opacity-100"
-                      aria-hidden="true"
-                    />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
+
+        <GridAnggota items={anggota} />
 
         {/* Wordmark besar sebagai penutup */}
         <div aria-hidden="true" className="mt-16 lg:mt-24">

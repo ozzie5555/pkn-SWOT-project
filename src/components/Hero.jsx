@@ -4,8 +4,10 @@ import { ArrowDown, ArrowUpRight } from 'lucide-react'
 
 import HeroBackground from '@/components/HeroBackground'
 import Logomark from '@/components/Logomark'
+import TextReveal from '@/components/TextReveal'
 import { Button } from '@/components/ui/button'
 import { meta } from '@/data'
+import { efek } from '@/lib/efek'
 
 // Sumber angka kunci tetap dari data.js (tidak ada fakta yang di-hardcode).
 const sorotan = meta.section.latarBelakang.stats
@@ -205,7 +207,11 @@ export default function Hero() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/95 text-pretty">
-              {meta.subjudul}
+              {efek.reveal ? (
+                <TextReveal teks={meta.subjudul} delay={180} stagger={34} />
+              ) : (
+                meta.subjudul
+              )}
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
