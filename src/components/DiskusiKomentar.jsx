@@ -795,7 +795,7 @@ export default function DiskusiKomentar() {
                   required
                   autoFocus
                   maxLength={10}
-                  placeholder="Masukkan PIN (default: 0813)"
+                  placeholder="Masukkan PIN"
                   value={inputPin}
                   onChange={(e) => setInputPin(e.target.value)}
                   className="bg-background text-foreground focus:border-accent-ikn focus:ring-accent-ikn w-full rounded-lg border py-2 pr-3 pl-9 text-center font-mono text-sm tracking-widest focus:ring-1 focus:outline-none"
