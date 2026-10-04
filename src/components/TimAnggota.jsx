@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import Reveal from '@/components/Reveal'
 import { Rule } from '@/components/Rule'
 import { Section, SectionHeading } from '@/components/Section'
 import { meta } from '@/data'
-import { inisial } from '@/lib/anggota'
+import { cariFotoAnggota, inisial } from '@/lib/anggota'
 import { efek } from '@/lib/efek'
 import { cn } from '@/lib/utils'
 
@@ -72,9 +72,25 @@ export default function TimAnggota() {
   const { eyebrow, judul, deskripsi, anggota } = meta.section.tim
   const interaktif = efek.anggota
   const [aktif, setAktif] = useState(null)
+  const timerRef = useRef(null)
 
-  const nyalakan = (i) => interaktif && setAktif(i)
-  const padamkan = () => interaktif && setAktif(null)
+  const nyalakan = (i) => {
+    if (!interaktif) return
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    setAktif(i)
+  }
+
+  const padamkan = () => {
+    if (!interaktif) return
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setAktif(null)
+      timerRef.current = null
+    }, 80)
+  }
 
   return (
     <Section id="tim" className="border-b">
@@ -209,7 +225,8 @@ export default function TimAnggota() {
  */
 function PotretAnggota({ orang, nyala, interaktif, nomor, onAktif, onPadam, tampilkanNama }) {
   const [gambarGagal, setGambarGagal] = useState(false)
-  const pakaiFoto = Boolean(orang.foto) && !gambarGagal
+  const fotoPath = cariFotoAnggota(orang.nama, orang.foto)
+  const pakaiFoto = Boolean(fotoPath) && !gambarGagal
   // Rasio seragam untuk semua kartu
   const rasio = 'aspect-[2/3]'
 
@@ -240,7 +257,7 @@ function PotretAnggota({ orang, nyala, interaktif, nomor, onAktif, onPadam, tamp
         >
           {pakaiFoto ? (
             <img
-              src={orang.foto}
+              src={fotoPath}
               alt=""
               width={600}
               height={800}

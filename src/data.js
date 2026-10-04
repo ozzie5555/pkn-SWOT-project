@@ -153,11 +153,48 @@ export const meta = {
     sumber: {
       judul: 'Sumber & Referensi',
       catatan:
-        'Materi disusun dari pemberitaan dan dokumen resmi — daftar lengkap akan dilampirkan.',
+        'Materi disusun dari pemberitaan dan dokumen resmi berikut:',
       items: [
-        { label: 'Referensi 1 (placeholder)', href: '#' },
-        { label: 'Referensi 2 (placeholder)', href: '#' },
-        { label: 'Referensi 3 (placeholder)', href: '#' },
+        {
+          label: '4 Alasan Ibu Kota Harus Keluar dari Pulau Jawa',
+          href: 'https://nasional.kompas.com/read/2019/08/27/09284821/4-alasan-mengapa-ibu-kota-indonesia-harus-keluar-dari-pulau-jawa',
+        },
+        {
+          label: '6 Alasan Ibu Kota Negara Pindah dari Jakarta ke Kaltim',
+          href: 'https://money.kompas.com/read/2022/02/11/052456426/6-alasan-ibu-kota-negara-pindah-dari-jakarta-ke-kalimantan-timur',
+        },
+        {
+          label: 'Portal Resmi Ibu Kota Nusantara',
+          href: 'https://ikn.go.id/id',
+        },
+        {
+          label: 'JDIH IKN - UU No. 21 Tahun 2023',
+          href: 'https://jdih.ikn.go.id/dokumen/uu-21-2023',
+        },
+        {
+          label: 'Isi UU IKN (Kompas.com)',
+          href: 'https://nasional.kompas.com/read/2022/06/25/02150071/isi-uu-ikn',
+        },
+        {
+          label: 'IKN Bergantung pada Investasi Swasta',
+          href: 'https://ikn.kompas.com/read/2025/01/19/155646987/tak-lagi-andalkan-apbn-ikn-bergantung-pada-investasi-swasta',
+        },
+        {
+          label: 'Kementerian Pekerjaan Umum (PU)',
+          href: 'https://pu.go.id',
+        },
+        {
+          label: 'Investasi Asing Sektor Jalan & MUT Tembus Rp 55 T',
+          href: 'https://ikn.kompas.com/read/2025/06/10/110100687/ikn-diserbu-pemodal-asing-sektor-jalan-dan-mut-tembus-rp-55-triliun',
+        },
+        {
+          label: 'Penyebab Belum Ada Investor Asing Masuk IKN',
+          href: 'https://www.kompas.com/tren/read/2024/06/12/160000465/bahlil-akui-belum-ada-investor-asing-masuk-ikn-apa-penyebabnya-',
+        },
+        {
+          label: 'Tentang Ibu Kota Nusantara (ikn.go.id)',
+          href: 'https://ikn.go.id/id/tentang',
+        },
       ],
     },
     kredit: 'Dibuat sebagai media pembelajaran. Konten disusun dari data yang tersedia.',

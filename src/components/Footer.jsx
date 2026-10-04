@@ -68,7 +68,7 @@ export default function Footer() {
             </p>
             <ul className="mt-3 space-y-1.5">
               {sumber.items.map((s) => (
-                <li key={s.label}>
+                <li key={s.href}>
                   <a
                     href={s.href}
                     target="_blank"
