@@ -6,7 +6,7 @@
  *
  * Prioritas nilai:
  *   1. query string  → ?efek=reveal,marquee
- *   2. localStorage  → diatur oleh PanelEfek (mode dev)
+ *   2. localStorage  → sisa eksperimen dev (aman dihapus)
  *   3. default       → semua aktif
  *
  * Nilai yang dikenal: reveal, spy, marquee, anggota.
@@ -60,12 +60,3 @@ function baca() {
 const aktif = new Set(baca())
 
 export const efek = Object.fromEntries(SEMUA.map((e) => [e, aktif.has(e)]))
-
-/** Dipakai hanya oleh PanelEfek (mode dev). */
-export function simpanEfek(daftar) {
-  try {
-    window.localStorage.setItem(KUNCI, daftar.join(','))
-  } catch {
-    /* localStorage bisa diblokir — abaikan, halaman tetap jalan. */
-  }
-}

@@ -4,7 +4,6 @@ import Footer from '@/components/Footer'
 import Hero from '@/components/Hero'
 import LatarBelakang from '@/components/LatarBelakang'
 import Marquee from '@/components/Marquee'
-import PanelEfek from '@/components/PanelEfek'
 import SiteHeader from '@/components/SiteHeader'
 import Timeline from '@/components/Timeline'
 import { meta } from '@/data'
@@ -17,7 +16,7 @@ export default function App() {
       <Hero />
       {/* Ticker mono: satu bilah tipis tepat di bawah hero. Sengaja hanya
           satu agar tidak terasa seperti template. Bisa dimatikan lewat
-          PanelEfek (dev) atau ?efek=none / hapus "marquee". */}
+          ?efek=none / hapus "marquee" di localStorage. */}
       {efek.marquee ? <Marquee items={meta.marquee} /> : null}
       <main>
         <LatarBelakang />
@@ -26,7 +25,6 @@ export default function App() {
         <DiskusiKomentar />
       </main>
       <Footer />
-      <PanelEfek />
     </>
   )
 }

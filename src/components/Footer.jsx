@@ -9,7 +9,7 @@ import { efek } from '@/lib/efek'
 /**
  * Grid anggota: kartu + spotlight + monogram.
  *
- * Bila efek "anggota" dimatikan (PanelEfek / `?efek=none`), jatuh ke kartu
+ * Bila efek "anggota" dimatikan (`?efek=none`), jatuh ke kartu
  * netral dengan ikon generik — versi asli sebelum efek ditambahkan.
  */
 function GridAnggota({ items }) {

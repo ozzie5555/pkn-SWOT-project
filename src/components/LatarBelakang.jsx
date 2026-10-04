@@ -79,23 +79,26 @@ export default function LatarBelakang() {
         <PanelLokasi className="mt-14 sm:mt-16" />
 
         {/* Peta Indonesia + titik IKN — menggantikan slider foto lama.
-            Ukuran di-center dalam lebar max-w-7xl (sama dengan konten section) —
-            tetap tanpa card; kalau terasa kecil, tinggal buang pembatasnya. */}
-        <div className="mt-16 sm:mt-20">
-          <div className="mb-5 flex items-center gap-4">
-            <span className="label-mono text-muted-foreground shrink-0">
+            FULL-BLEED tapi dibatasi max-w-[1600px] supaya di layar raksasa
+            tetap proporsional; di laptop umum (1280–1440px) ia lebar penuh. */}
+        <div className="mt-20 sm:mt-24">
+          <div className="mb-10 flex items-center gap-4">
+            <span className="label-mono text-muted-foreground shrink-0 text-sm tracking-widest sm:text-base">
               Letak di Peta
             </span>
             <span aria-hidden="true" className="bg-border h-px flex-1" />
           </div>
           <Reveal>
-            <div className="mx-auto max-w-7xl">
-              <PetaIndonesia
-                judul={meta.section.latarBelakang.peta.judul}
-                keterangan={meta.section.latarBelakang.peta.keterangan}
-                fakta={meta.section.latarBelakang.peta.fakta}
-                titik={meta.section.latarBelakang.peta.titik}
-              />
+            <div className="mx-[calc(50%-50vw)] w-screen">
+              {/* Cap 1600px + padding tepi agar di layar lebar tak melar kaku */}
+              <div className="mx-auto max-w-[1600px] px-4 sm:px-6">
+                <PetaIndonesia
+                  judul={meta.section.latarBelakang.peta.judul}
+                  keterangan={meta.section.latarBelakang.peta.keterangan}
+                  fakta={meta.section.latarBelakang.peta.fakta}
+                  titik={meta.section.latarBelakang.peta.titik}
+                />
+              </div>
             </div>
           </Reveal>
         </div>
