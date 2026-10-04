@@ -114,21 +114,26 @@ export const meta = {
         'Sampaikan pandangan kritis, pertanyaan, atau masukan untuk sesi diskusi presentasi.',
       kategoriOpsi: ['Pertanyaan', 'Pandangan', 'Saran'],
     },
+    tim: {
+      eyebrow: 'Tim Penyusun',
+      judul: 'Anggota Kelompok',
+      deskripsi:
+        'Delapan penyusun di balik media pembelajaran Analisis SWOT Ibu Kota Nusantara.',
+      // Foto asli (public/anggota/<slug>.webp, rasio 3:4). `foto: null`
+      // → komponen menampilkan monogram inisial (tanpa request gambar).
+      anggota: [
+        { id: 1, nama: 'Amaris Wursita', peran: 'Anggota', foto: null },
+        { id: 2, nama: 'Krisna Mandala Putra', peran: 'Anggota', foto: null },
+        { id: 3, nama: 'Lathifa Ramadanti Putri', peran: 'Anggota', foto: null },
+        { id: 4, nama: 'Lukas Danu Saptaji', peran: 'Anggota', foto: null },
+        { id: 5, nama: 'Rieva Asancaya Aneela El Daviq', peran: 'Anggota', foto: null },
+        { id: 6, nama: 'Restu Galih Pratama', peran: 'Anggota', foto: null },
+        { id: 7, nama: 'Satrya Panji Atmoko Siregar', peran: 'Anggota', foto: null },
+        { id: 8, nama: 'Theodora Ovrisa Ersalina', peran: 'Anggota', foto: null },
+      ],
+    },
   },
   footer: {
-    judulAnggota: 'Anggota Kelompok',
-    deskripsiAnggota:
-      'Tim penyusun dan pengembang media pembelajaran Analisis SWOT Ibu Kota Nusantara.',
-    anggota: [
-      { id: 1, nama: 'Amaris Wursita', role: 'Anggota Kelompok' },
-      { id: 2, nama: 'Krisna Mandala Putra', role: 'Anggota Kelompok' },
-      { id: 3, nama: 'Lathifa Ramadanti Putri', role: 'Anggota Kelompok' },
-      { id: 4, nama: 'Lukas Danu Saptaji', role: 'Anggota Kelompok' },
-      { id: 5, nama: 'Rieva Asancaya Aneela El Daviq', role: 'Anggota Kelompok' },
-      { id: 6, nama: 'Restu Galih Pratama', role: 'Anggota Kelompok' },
-      { id: 7, nama: 'Satrya Panji Atmoko Siregar', role: 'Anggota Kelompok' },
-      { id: 8, nama: 'Theodora Ovrisa Ersalina', role: 'Anggota Kelompok' },
-    ],
     kredit: 'Dibuat sebagai media pembelajaran. Konten disusun dari data yang tersedia.',
   },
 }

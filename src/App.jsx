@@ -6,6 +6,7 @@ import LatarBelakang from '@/components/LatarBelakang'
 import Marquee from '@/components/Marquee'
 import SiteHeader from '@/components/SiteHeader'
 import Timeline from '@/components/Timeline'
+import TimAnggota from '@/components/TimAnggota'
 import { meta } from '@/data'
 import { efek } from '@/lib/efek'
 
@@ -23,6 +24,7 @@ export default function App() {
         <AnalisisSwot />
         <Timeline />
         <DiskusiKomentar />
+        <TimAnggota />
       </main>
       <Footer />
     </>

@@ -12,6 +12,7 @@ const navItems = [
   { href: '#swot', label: 'SWOT', nomor: '02' },
   { href: '#timeline', label: 'Timeline', nomor: '03' },
   { href: '#diskusi', label: 'Diskusi', nomor: '04' },
+  { href: '#tim', label: 'Tim', nomor: '05' },
 ]
 
 // Daftar href stabil (konstanta modul) supaya effect scroll spy tidak

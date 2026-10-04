@@ -1,7 +1,7 @@
 /**
  * src/lib/anggota.js
  * ---------------------------------------------------------------------------
- * Helper kecil untuk tampilan bagian anggota (KartuAnggota).
+ * Helper kecil untuk tampilan bagian anggota (TimAnggota).
  * ---------------------------------------------------------------------------
  */
 
