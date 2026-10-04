@@ -5,30 +5,103 @@ import { Rule } from '@/components/Rule'
 import { meta } from '@/data'
 
 /**
- * Footer ringkas — satu baris atas yang sejajar (identitas kiri,
- * "Kembali ke atas" kanan), lalu wordmark penutup yang langsung mengikuti,
- * dan kredit sebagai baris tipis paling bawah.
+ * Footer profesional — adaptasi pola "Footer with Navigation Grid"
+ * (shadcnui-blocks) + "Large Name Footer" (Spectrum UI), dengan bahasa
+ * desain editorial milik halaman ini:
  *
- * Daftar anggota kini ditampilkan di section "Tim Penyusun" (TimAnggota,
- * bab 05), bukan lagi di footer.
+ *   Zona 1: identitas (logo + tagline) | grid navigasi 2 kolom | sumber
+ *   Zona 2: wordmark besar NUSANTARA dengan sheen halus (reactbits Shiny Text)
+ *   Zona 3: bottom bar — kredit kiri, kembali ke atas kanan
+ *
+ * Semua anchor mengarah ke section yang benar; hover konsisten (muted →
+ * foreground); keyboard reachable (semua elemen interaktif adalah <a>).
  */
 export default function Footer() {
-  const { kredit } = meta.footer
+  const { deskripsi, jelajahi, sumber, kredit } = meta.footer
 
   return (
     <footer className="paper-grain relative overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 pt-16 pb-10 lg:px-10 lg:pt-20 lg:pb-12">
-        {/* Baris atas: identitas + kembali ke atas — sejajar dalam satu baris */}
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-          <div className="flex items-center gap-3">
-            <Logomark animated={false} className="text-primary size-8" />
-            <div className="leading-none">
-              <p className="text-sm font-semibold tracking-tight">SWOT IKN</p>
-              <p className="label-mono text-muted-foreground mt-1">
-                Nusantara · Kalimantan Timur
-              </p>
+      <div className="mx-auto max-w-7xl px-6 pt-16 lg:px-10 lg:pt-20">
+        {/* ===== Zona 1: identitas + navigasi + sumber ===== */}
+        <div className="grid gap-12 lg:grid-cols-12">
+          {/* Kolom identitas */}
+          <div className="lg:col-span-5">
+            <div className="flex items-center gap-3">
+              <Logomark animated={false} className="text-primary size-8" />
+              <div className="leading-none">
+                <p className="text-sm font-semibold tracking-tight">SWOT IKN</p>
+                <p className="label-mono text-muted-foreground mt-1">
+                  Nusantara · Kalimantan Timur
+                </p>
+              </div>
             </div>
+            <p className="text-muted-foreground mt-5 max-w-sm text-sm leading-relaxed text-pretty">
+              {deskripsi}
+            </p>
           </div>
+
+          {/* Kolom navigasi (grid internal) */}
+          <div className="lg:col-span-4">
+            <h2 className="label-mono text-muted-foreground">{jelajahi.judul}</h2>
+            <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+              {jelajahi.items.map((item) => (
+                <li key={item.href}>
+                  <a
+                    href={item.href}
+                    className="text-muted-foreground hover:text-foreground group flex items-baseline gap-2.5 text-sm transition-colors"
+                  >
+                    <span className="label-mono text-primary/60 group-hover:text-primary text-[0.65rem] tabular-nums transition-colors">
+                      {item.nomor}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Kolom sumber & referensi */}
+          <div className="lg:col-span-3">
+            <h2 className="label-mono text-muted-foreground">{sumber.judul}</h2>
+            <p className="text-muted-foreground mt-4 text-xs leading-relaxed text-pretty">
+              {sumber.catatan}
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {sumber.items.map((s) => (
+                <li key={s.label}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-muted-foreground hover:text-foreground text-xs underline decoration-border underline-offset-4 transition-colors hover:decoration-current"
+                  >
+                    {s.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <Rule className="mt-14" />
+
+        {/* ===== Zona 2: wordmark besar + sheen halus ===== */}
+        <div aria-hidden="true" className="mt-10 lg:mt-12">
+          <span className="relative block text-center">
+            <span className="text-foreground/[0.07] block text-[15vw] leading-[0.8] font-semibold tracking-tighter select-none sm:text-[13vw]">
+              NUSANTARA
+            </span>
+            {/* Sapuan sheen lewat wordmark (diam ~55% waktu, menyapu ~3s)
+                — pola reactbits "Shiny Text", senada bahasa shimmer peta */}
+            <span className="animate-sheen absolute inset-0 bg-[linear-gradient(105deg,transparent_40%,rgba(255,255,255,0.5)_50%,transparent_60%)] bg-[length:250%_100%] bg-no-repeat" />
+          </span>
+        </div>
+
+        <Rule className="mt-2" />
+
+        {/* ===== Zona 3: bottom bar ===== */}
+        <div className="mt-6 flex flex-col items-start justify-between gap-4 pb-10 sm:flex-row sm:items-center lg:pb-12">
+          <p className="text-muted-foreground text-sm text-pretty">{kredit}</p>
 
           <a
             href="#beranda"
@@ -41,21 +114,6 @@ export default function Footer() {
             />
           </a>
         </div>
-
-        <Rule className="mt-10" />
-
-        {/* Wordmark penutup — langsung mengikuti baris identitas, bukan
-            "jatuh" jauh di bawah dengan gap besar seperti sebelumnya */}
-        <div aria-hidden="true" className="mt-10 lg:mt-14">
-          <span className="text-foreground/[0.06] block text-center text-[15vw] leading-[0.8] font-semibold tracking-tighter select-none sm:text-[13vw]">
-            NUSANTARA
-          </span>
-        </div>
-
-        <Rule className="mt-8" />
-
-        {/* Kredit — baris penutup tipis */}
-        <p className="text-muted-foreground mt-6 text-sm text-pretty">{kredit}</p>
       </div>
     </footer>
   )

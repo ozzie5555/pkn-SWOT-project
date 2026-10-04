@@ -122,6 +122,9 @@
   --animate-marquee: marquee 46s linear infinite;
   /* Sapuan terang berjalan sepanjang garis Jakarta→IKN di peta. */
   --animate-garis-shimmer: garis-shimmer 7s linear infinite;
+  /* Sheen wordmark footer: kilat lembut menyapu teks besar (sekali per ~9s,
+     sebagian besar waktu diam). */
+  --animate-sheen: sheen 9s ease-in-out infinite;
 
   @keyframes float {
     0%,
@@ -250,6 +253,19 @@
       stroke-dashoffset: -1;
     }
   }
+
+  /* Sheen wordmark: gradasi terang menyapu dari kiri ke kanan lalu diam.
+     background-position 200% → -200% pada layer 250% lebar. */
+  @keyframes sheen {
+    0%,
+    55% {
+      background-position: 200% 0;
+    }
+    85%,
+    100% {
+      background-position: -200% 0;
+    }
+  }
 }
 
 /* Kelas utilitas untuk shimmer batas provinsi (di luar @theme agar bisa
@@ -310,6 +326,7 @@
     .animate-shimmer,
     .animate-marquee,
     .animate-garis-shimmer,
+    .animate-sheen,
     .shimmer-pulau,
     .logomark-draw,
     .logomark-pop {

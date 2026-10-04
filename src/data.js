@@ -134,6 +134,32 @@ export const meta = {
     },
   },
   footer: {
+    // Tagline singkat di bawah identitas logo.
+    deskripsi:
+      'Media pembelajaran interaktif — analisis SWOT pembangunan Ibu Kota Nusantara dari latar belakang hingga timeline 2045.',
+    // Navigasi internal (footer) — konsisten dengan SiteHeader.
+    jelajahi: {
+      judul: 'Jelajahi',
+      items: [
+        { href: '#beranda', label: 'Beranda', nomor: '00' },
+        { href: '#latar-belakang', label: 'Latar Belakang', nomor: '01' },
+        { href: '#swot', label: 'Analisis SWOT', nomor: '02' },
+        { href: '#timeline', label: 'Timeline', nomor: '03' },
+        { href: '#diskusi', label: 'Aspirasi & Diskusi', nomor: '04' },
+        { href: '#tim', label: 'Tim Penyusun', nomor: '05' },
+      ],
+    },
+    // Placeholder — ganti dengan tajuk/tautan referensi yang sebenarnya.
+    sumber: {
+      judul: 'Sumber & Referensi',
+      catatan:
+        'Materi disusun dari pemberitaan dan dokumen resmi — daftar lengkap akan dilampirkan.',
+      items: [
+        { label: 'Referensi 1 (placeholder)', href: '#' },
+        { label: 'Referensi 2 (placeholder)', href: '#' },
+        { label: 'Referensi 3 (placeholder)', href: '#' },
+      ],
+    },
     kredit: 'Dibuat sebagai media pembelajaran. Konten disusun dari data yang tersedia.',
   },
 }
