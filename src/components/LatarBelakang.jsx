@@ -79,7 +79,8 @@ export default function LatarBelakang() {
         <PanelLokasi className="mt-14 sm:mt-16" />
 
         {/* Peta Indonesia + titik IKN — menggantikan slider foto lama.
-            Diberi ruang judul sendiri supaya terbaca sebagai satu unit. */}
+            Ukuran di-center dalam lebar max-w-7xl (sama dengan konten section) —
+            tetap tanpa card; kalau terasa kecil, tinggal buang pembatasnya. */}
         <div className="mt-16 sm:mt-20">
           <div className="mb-5 flex items-center gap-4">
             <span className="label-mono text-muted-foreground shrink-0">
@@ -88,12 +89,14 @@ export default function LatarBelakang() {
             <span aria-hidden="true" className="bg-border h-px flex-1" />
           </div>
           <Reveal>
-            <PetaIndonesia
-              judul={meta.section.latarBelakang.peta.judul}
-              keterangan={meta.section.latarBelakang.peta.keterangan}
-              fakta={meta.section.latarBelakang.peta.fakta}
-              titik={meta.section.latarBelakang.peta.titik}
-            />
+            <div className="mx-auto max-w-7xl">
+              <PetaIndonesia
+                judul={meta.section.latarBelakang.peta.judul}
+                keterangan={meta.section.latarBelakang.peta.keterangan}
+                fakta={meta.section.latarBelakang.peta.fakta}
+                titik={meta.section.latarBelakang.peta.titik}
+              />
+            </div>
           </Reveal>
         </div>
 

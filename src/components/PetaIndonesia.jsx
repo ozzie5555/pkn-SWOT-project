@@ -5,7 +5,6 @@ import { Move, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import {
   IKN_TITIK,
   JAKARTA_TITIK,
-  KHATULISTIWA,
   LABEL_PROVINSI,
   PULAU,
   VIEW_BOX,
@@ -17,19 +16,30 @@ import { useInView } from '@/lib/use-in-view'
 /**
  * Peta Indonesia (siluet 34 provinsi) dengan penanda lokasi IKN — bisa di-zoom.
  *
+ * Tampilan FULL-BLEED tanpa "card": border/background/header panel dibuang,
+ * peta mengisi lebar viewport-nya sendiri. Kontrol & info tampil sebagai
+ * lapisan melayang tipis di atas peta.
+ *
  * Susunan lapisan (sengaja dua lapis agar berbeda perilaku saat di-zoom):
  * - Lapisan TER-SKALA: hanya polygon provinsi. Ikut membesar saat di-zoom.
- * - Lapisan TETAP-UKURAN: label pulau, nama provinsi, garis khatulistiwa,
- *   penanda titik, dan garis Jakarta→IKN. Koordinatnya diproyeksikan manual
- *   (x·s + tx), jadi tulisannya TIDAK ikut membesar — tetap tajam & terbaca
- *   berapa pun tingkat zoom-nya. (Kalau ikut di-scale, teks jadi raksasa.)
+ * - Lapisan TETAP-UKURAN: nama pulau/provinsi, penanda titik, garis Jakarta→IKN.
+ *   Koordinatnya diproyeksikan manual (x·s + tx), jadi tulisannya TIDAK ikut
+ *   membesar — tetap tajam & terbaca berapa pun tingkat zoom-nya.
+ *   (Kalau ikut di-scale, teks jadi raksasa.)
  *
  * Zoom & geser:
  * - Scroll / tombol +/-  : zoom ke arah kursor
  * - Seret (drag)         : geser peta
  * - Klik ganda           : perbesar
  * - Tombol reset         : kembali ke tampilan penuh
- * - Nama provinsi otomatis muncul setelah cukup di-zoom.
+ * - Nama provinsi otomatis muncul setelah zoom melewati ambang global
+ *   (S_LABEL_PROVINSI) ditambah ambang per-provinsi (minZoom).
+ *
+ * Idle drift ("panorama"): saat peta terlihat, tidak di-zoom, dan tidak
+ * ada interaksi, satu <g> pembungkus digeser sangat pelan (sine loop) lewat
+ * rAF imperatif — TIDAK lewat React state, agar ~40 label tidak di-render
+ * ulang tiap frame. Interaksi apa pun menghentikannya; drift menyala lagi
+ * setelah beberapa detik idle.
  *
  * Akurasi: koordinat titik diverifikasi lewat georeferensi (lihat catatan di
  * src/lib/peta-data.js). Titik label provinsi dijamin berada di dalam
@@ -42,9 +52,16 @@ const VW = 793
 const VH = 288
 const S_MIN = 1
 const S_MAX = 6
-// Di bawah zoom ini label pulau tampil; di atasnya ia memudar, digantikan
-// label provinsi (supaya keduanya tidak saling menumpuk).
-const S_PULAU = 2.2
+// Label provinsi baru muncul setelah zoom melewati ambang global ini
+// (provinsi dengan `minZoom` lebih tinggi tetap patuh ambangnya masing-masing).
+const S_LABEL_PROVINSI = 3.2
+// Label pulau memudar sebelum label provinsi menyala (tidak saling tumpuk).
+const S_LABEL_PULAU = 2.4
+
+// --- Karakter idle drift (disetel agar terasa "hidup" tetapi tenang) ---
+const DRIFT_AMPLITUDO = 14 // unit viewBox
+const DRIFT_PERIODE_MS = 45_000 // satu ayunan penuh barat→timur→barat
+const DRIFT_JEDA_MS = 3_000 // menunggu idle selama ini sebelum drift jalan lagi
 
 const batasi = (n, min, max) => Math.min(max, Math.max(min, n))
 
@@ -64,18 +81,19 @@ function pulauDari(namaProv) {
   return PULAU.find((p) => p.provinsi.includes(namaProv))?.nama ?? null
 }
 
-export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [], className }) {
+export default function PetaIndonesia({ keterangan, fakta = [], titik = [], className }) {
   const [ref, inView] = useInView({ threshold: 0.25 })
   const [hover, setHover] = useState(null)
   const [pilih, setPilih] = useState(null)
-
-  const [lapis, setLapis] = useState({ pulau: true, khatulistiwa: true })
-  const toggleLapis = (k) => setLapis((p) => ({ ...p, [k]: !p[k] }))
+  // Petunjuk zoom hanya tampil sampai interaksi pertama.
+  const [pernahInteraksi, setPernahInteraksi] = useState(false)
 
   const [view, setView] = useState({ s: 1, tx: 0, ty: 0 })
   const [seret, setSeret] = useState(false)
   const svgRef = useRef(null)
   const dragRef = useRef(null)
+  const driftRef = useRef(null) // <g> pembungkus lapisan peta (untuk drift)
+  const interaksiTerakhir = useRef(0)
 
   // Lebar kontainer (css px) — dipakai untuk menjaga ukuran TEKS & PENANDA
   // tetap konstan di layar. Tanpa ini, di layar sempit teks jadi sangat kecil
@@ -108,18 +126,74 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
     }
   }, [])
 
-  // --- Zoom (fokus ke titik tertentu; default: tengah peta) ---
-  const zoomKe = useCallback((faktor, fokus) => {
-    setView((lama) => {
-      const s1 = batasi(lama.s * faktor, S_MIN, S_MAX)
-      if (s1 === lama.s) return lama
-      const c = fokus ?? { x: VX + VW / 2, y: VY + VH / 2 }
-      // Titik peta di bawah kursor: p = (c - t) / s. Setelah zoom, jaga c tetap.
-      const px = (c.x - lama.tx) / lama.s
-      const py = (c.y - lama.ty) / lama.s
-      return clampView({ s: s1, tx: c.x - px * s1, ty: c.y - py * s1 })
-    })
+  // --- Idle drift (rAF imperatif, tanpa re-render) ---
+  // Geser `driftRef` secara sinusoidal hanya saat: terlihat di viewport,
+  // zoom masih 1 (tampilan penuh), dan sudah idle beberapa detik.
+  useEffect(() => {
+    if (!inView) return undefined
+    const el = driftRef.current
+    if (!el) return undefined
+
+    const amanDrift = () =>
+      typeof matchMedia === 'undefined' ||
+      !matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const jalanRaf = { id: 0 }
+    const mulai = performance.now()
+
+    const tick = (sekarang) => {
+      jalanRaf.id = requestAnimationFrame(tick)
+      const idle = sekarang - interaksiTerakhir.current >= DRIFT_JEDA_MS
+      const boleh = amanDrift() && idle
+      if (!boleh) {
+        // Melunakkan mulus ke 0 saat pause — tidak "nyangkut" di offset.
+        const sekarangTransform = el.getAttribute('transform')
+        if (sekarangTransform && sekarangTransform !== `translate(0 0)`) {
+          el.setAttribute('transform', 'translate(0 0)')
+        }
+        return
+      }
+      const t = ((sekarang - mulai) % DRIFT_PERIODE_MS) / DRIFT_PERIODE_MS
+      const offset = Math.sin(t * Math.PI * 2) * DRIFT_AMPLITUDO
+      el.setAttribute('transform', `translate(${offset.toFixed(2)} 0)`)
+    }
+    jalanRaf.id = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(jalanRaf.id)
+  }, [inView])
+
+  // Catat interaksi (untuk jeda drift). Dipanggil dari semua jalur input.
+  const tandaiInteraksi = useCallback(() => {
+    interaksiTerakhir.current = performance.now()
   }, [])
+
+  // Pause drift saat tab tidak terlihat (hemat baterai; rAF memang berhenti,
+  // tapi ini juga mencegah lompatan offset saat kembali).
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined
+    const onVis = () => {
+      if (!document.hidden) tandaiInteraksi()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [tandaiInteraksi])
+
+  // --- Zoom (fokus ke titik tertentu; default: tengah peta) ---
+  const zoomKe = useCallback(
+    (faktor, fokus) => {
+      setPernahInteraksi(true)
+      tandaiInteraksi()
+      setView((lama) => {
+        const s1 = batasi(lama.s * faktor, S_MIN, S_MAX)
+        if (s1 === lama.s) return lama
+        const c = fokus ?? { x: VX + VW / 2, y: VY + VH / 2 }
+        // Titik peta di bawah kursor: p = (c - t) / s. Setelah zoom, jaga c tetap.
+        const px = (c.x - lama.tx) / lama.s
+        const py = (c.y - lama.ty) / lama.s
+        return clampView({ s: s1, tx: c.x - px * s1, ty: c.y - py * s1 })
+      })
+    },
+    [tandaiInteraksi],
+  )
 
   // Zoom dengan roda mouse. React memasang onWheel sebagai listener PASSIVE,
   // sehingga preventDefault() di sana tidak diizinkan (halaman ikut ter-scroll).
@@ -137,6 +211,8 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
 
   const onPointerDown = (e) => {
     if (e.button != null && e.button !== 0) return
+    setPernahInteraksi(true)
+    tandaiInteraksi()
     const rect = svgRef.current?.getBoundingClientRect()
     if (!rect?.width) return
     dragRef.current = {
@@ -162,6 +238,7 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
     const dx = e.clientX - d.x
     const dy = e.clientY - d.y
     if (Math.hypot(dx, dy) > 3) d.pindah = true
+    tandaiInteraksi()
     setView((lama) =>
       clampView({ s: lama.s, tx: d.tx + dx * d.kx, ty: d.ty + dy * d.ky }),
     )
@@ -178,7 +255,10 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
     }, 0)
   }
 
-  const reset = () => setView({ s: 1, tx: 0, ty: 0 })
+  const reset = () => {
+    tandaiInteraksi()
+    setView({ s: 1, tx: 0, ty: 0 })
+  }
 
   const semuaTitik = titik
   const info = hover ?? pilih
@@ -188,51 +268,53 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
 
   return (
     <figure ref={ref} className={cn('m-0', className)}>
-      <div className="border-border bg-card/40 overflow-hidden rounded-2xl border">
-        {/* Kepala panel */}
-        <div className="border-border/60 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-5 py-3">
-          <span className="label-mono text-muted-foreground">
-            {judul ?? 'Peta IKN'}
-          </span>
-          <span
-            aria-live="polite"
-            className={cn(
-              'label-mono min-h-4 text-right transition-opacity',
-              info ? 'opacity-100' : 'opacity-0',
-            )}
-          >
-            {info ? (
-              <span className={cn(kaltimTerpilih ? 'text-accent-ikn' : 'text-foreground')}>
-                {info}
-                {infoPulau ? ` · ${infoPulau}` : ''}
-              </span>
-            ) : (
-              '\u00A0'
-            )}
-          </span>
-        </div>
+      {/* ===== Peta (kiri) + fakta (kanan) =====
+          lg: peta mengambil ruang utama, fakta jadi kolom vertikal di samping
+          (angka besar + label, dipisah hairline). Mobile: peta dulu, fakta
+          pindah ke bawah sebagai grid 2 kolom. */}
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+        {/* Kolom fakta — kanan (lg) / bawah peta (mobile), hanya jika ada */}
+        {fakta.length ? (
+        <ul className="order-2 grid grid-cols-2 gap-x-6 gap-y-4 lg:order-2 lg:w-48 lg:shrink-0 lg:grid-cols-1 lg:gap-y-0 lg:divide-y lg:divide-border/60">
+            {fakta.map((f) => (
+              <li key={f.label} className="lg:py-3.5 lg:first:pt-0">
+                <span className="text-foreground block font-mono text-lg font-semibold tabular-nums">
+                  {f.nilai}
+                </span>
+                <span className="label-mono text-muted-foreground mt-0.5 block text-xs">
+                  {f.label}
+                </span>
+              </li>
+            ))}
+        </ul>
+        ) : null}
 
-        {/* Peta + kontrol zoom */}
-        <div className="relative px-3 py-4 sm:px-5 sm:py-6">
-          <svg
-            ref={svgRef}
-            viewBox={VIEW_BOX}
-            role="img"
-            aria-label="Peta Indonesia dengan penanda lokasi Ibu Kota Nusantara di Kalimantan Timur. Gunakan tombol zoom untuk memperbesar."
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onDoubleClick={(e) => zoomKe(1.6, keViewBox(e.clientX, e.clientY))}
-            className={cn(
-              'h-auto w-full overscroll-contain select-none',
-              // Saat belum di-zoom tak ada yang perlu digeser, jadi sentuhan
-              // dibiarkan men-scroll halaman. Setelah di-zoom, sentuhan dipakai
-              // untuk menggeser peta.
-              bisaGeser ? 'touch-none' : 'touch-pan-y',
-              bisaGeser ? (seret ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default',
-            )}
-          >
+        {/* Peta — kiri (lg), ambil sisa lebar */}
+        <div className="order-1 min-w-0 flex-1 lg:order-1">
+            <div className="relative">
+              <svg
+                ref={svgRef}
+                viewBox={VIEW_BOX}
+                role="img"
+                aria-label="Peta Indonesia dengan penanda lokasi Ibu Kota Nusantara di Kalimantan Timur. Gunakan tombol zoom untuk memperbesar."
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                onDoubleClick={(e) => zoomKe(1.6, keViewBox(e.clientX, e.clientY))}
+                className={cn(
+                  'h-auto w-full overscroll-contain select-none',
+                  // Saat belum di-zoom tak ada yang perlu digeser, jadi sentuhan
+                  // dibiarkan men-scroll halaman. Setelah di-zoom, sentuhan dipakai
+                  // untuk menggeser peta.
+                  bisaGeser ? 'touch-none' : 'touch-pan-y',
+                  bisaGeser ? (seret ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default',
+                )}
+              >
+          {/* Pembungkus drift: digeser imperatif via rAF (lihat useEffect di atas).
+              Seluruh isi peta ikut bergeser bersama, apa pun tingkat zoom-nya —
+              saat di-zoom offset tetap 0 karena drift dijeda oleh interaksi. */}
+          <g ref={driftRef} transform="translate(0 0)">
             {/* ===== Lapisan TER-SKALA: hanya polygon provinsi ===== */}
             <g transform={`translate(${view.tx} ${view.ty}) scale(${view.s})`}>
               {provinsi.map((prov) => {
@@ -247,6 +329,7 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
                     onClick={() => {
                       // Abaikan klik yang ujungnya adalah seret peta.
                       if (dragRef.current?.pindah) return
+                      tandaiInteraksi()
                       setPilih((p) => (p === prov.name ? null : prov.name))
                     }}
                     className={cn(
@@ -263,64 +346,35 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
 
             {/* ===== Lapisan TETAP-UKURAN (koordinat diproyeksikan manual) ===== */}
 
-            {/* Garis khatulistiwa */}
-            {lapis.khatulistiwa ? (
-              <g
-                aria-hidden="true"
-                className={cn(
-                  'transition-opacity duration-700',
-                  inView ? 'opacity-100' : 'opacity-0',
-                )}
-              >
-                <line
-                  x1={VX}
-                  y1={projY(KHATULISTIWA.y)}
-                  x2={VX + VW}
-                  y2={projY(KHATULISTIWA.y)}
-                  strokeDasharray={`${1 * unit} ${8 * unit}`}
-                  className="stroke-muted-foreground/45"
-                  strokeWidth={0.7 * unit}
-                />
+            {/* Label pulau — subtle & melebar; memudar saat mulai di-zoom agar
+                tidak berebut perhatian dengan label provinsi. */}
+            <g aria-hidden="true">
+              {PULAU.map((p) => (
                 <text
-                  x={VX + 6 * unit}
-                  y={projY(KHATULISTIWA.y) - 4 * unit}
-                  style={{ fontSize: `${10 * unit}px` }}
-                  className="fill-muted-foreground/80 tracking-wide uppercase [paint-order:stroke]"
+                  key={p.nama}
+                  x={projX(p.x)}
+                  y={projY(p.y)}
+                  textAnchor="middle"
+                  style={{ fontSize: `${11 * unit}px` }}
+                  className={cn(
+                    'fill-muted-foreground/45 font-medium tracking-[0.3em] uppercase transition-opacity duration-500 [paint-order:stroke]',
+                    view.s < S_LABEL_PULAU ? 'opacity-100' : 'opacity-0',
+                  )}
                   stroke="var(--background)"
-                  strokeWidth={2.5 * unit}
+                  strokeWidth={3 * unit}
                 >
-                  {KHATULISTIWA.label}
+                  {p.nama}
                 </text>
-              </g>
-            ) : null}
+              ))}
+            </g>
 
-            {/* Label pulau */}
-            {lapis.pulau ? (
-              <g aria-hidden="true">
-                {PULAU.map((p) => (
-                  <text
-                    key={p.nama}
-                    x={projX(p.x)}
-                    y={projY(p.y)}
-                    textAnchor="middle"
-                    style={{ fontSize: `${12 * unit}px` }}
-                    className={cn(
-                      'fill-muted-foreground/70 font-medium tracking-wide uppercase transition-opacity duration-500 [paint-order:stroke]',
-                      inView && view.s < S_PULAU ? 'opacity-100' : 'opacity-0',
-                    )}
-                    stroke="var(--background)"
-                    strokeWidth={3 * unit}
-                  >
-                    {p.nama}
-                  </text>
-                ))}
-              </g>
-            ) : null}
-
-            {/* Nama tiap provinsi — tiap label punya ambang zoom sendiri
+            {/* Nama tiap provinsi — muncul setelah zoom melewati ambang global
+                (S_LABEL_PROVINSI); tiap label punya ambang tambahan sendiri
                 (minZoom) agar tidak menumpuk dengan tetangganya. */}
             <g aria-hidden="true" className="transition-opacity duration-300">
-              {LABEL_PROVINSI.filter((l) => view.s >= (l.minZoom ?? 1)).map((l) => (
+              {LABEL_PROVINSI.filter(
+                (l) => view.s >= S_LABEL_PROVINSI && view.s >= (l.minZoom ?? 1),
+              ).map((l) => (
                 <text
                   key={l.name}
                   x={projX(l.x)}
@@ -339,7 +393,7 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
               ))}
             </g>
 
-            {/* Garis pemindahan Jakarta → IKN */}
+            {/* Garis pemindahan Jakarta → IKN (menggambar diri saat masuk view) */}
             <line
               x1={projX(JAKARTA_TITIK.x)}
               y1={projY(JAKARTA_TITIK.y)}
@@ -349,13 +403,29 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
               strokeDasharray="1"
               aria-hidden="true"
               className={cn(
-                'stroke-accent-ikn/70 transition-[stroke-dashoffset] duration-[1600ms] ease-out motion-reduce:transition-none',
+                'stroke-accent-ikn/45 transition-[stroke-dashoffset] duration-[1600ms] ease-out motion-reduce:transition-none',
                 inView ? '[stroke-dashoffset:0]' : '[stroke-dashoffset:1]',
               )}
-              strokeWidth={0.9 * unit}
+              strokeWidth={0.65 * unit}
             />
 
-            {/* Penanda titik lokasi */}
+            {/* Shimmer: segmen terang pendek menyapu sepanjang garis di atas.
+                pathLength=1 → dashoffset dari 1 ke -1 memindahkan dash dari
+                ujung ke ujung. Kontras rendah; disembunyikan untuk reduced-motion. */}
+            <line
+              x1={projX(JAKARTA_TITIK.x)}
+              y1={projY(JAKARTA_TITIK.y)}
+              x2={projX(IKN_TITIK.x)}
+              y2={projY(IKN_TITIK.y)}
+              pathLength="1"
+              strokeDasharray={`${0.12 * unit} ${1}`}
+              aria-hidden="true"
+              className="animate-garis-shimmer motion-reduce:hidden stroke-background/90"
+              strokeWidth={1.15 * unit}
+              strokeLinecap="round"
+            />
+
+            {/* Penanda titik lokasi + label langsung di peta */}
             {semuaTitik
               .filter((t) => t.diPeta !== false)
               .map((t, i) => (
@@ -373,7 +443,7 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
                       cx={projX(t.x)}
                       cy={projY(t.y)}
                       r={4 * unit}
-                      className="fill-accent-ikn/40 animate-pulse-ring origin-center [transform-box:fill-box] motion-reduce:hidden"
+                      className="fill-accent-ikn/25"
                     />
                   ) : null}
 
@@ -392,9 +462,9 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
                   />
 
                   <text
-                    x={projX(t.x) + (t.utama ? 7 : 5) * unit}
-                    y={projY(t.y) + (t.lama ? 9 : -5) * unit}
-                    style={{ fontSize: `${13 * unit}px` }}
+                    x={projX(t.x) + (t.utama ? 8 : 6) * unit}
+                    y={projY(t.y) + (t.lama ? 10 : -6) * unit}
+                    style={{ fontSize: `${12 * unit}px` }}
                     className={cn(
                       'fill-current font-medium [paint-order:stroke]',
                       t.utama ? 'text-accent-ikn' : 'text-muted-foreground',
@@ -403,117 +473,86 @@ export default function PetaIndonesia({ judul, keterangan, fakta = [], titik = [
                     strokeWidth={3 * unit}
                   >
                     {t.singkat ?? t.nama}
+                    {/* keterangan peran kecil di bawah nama */}
+                    <tspan
+                      x={projX(t.x) + (t.utama ? 8 : 6) * unit}
+                      dy={`${13 * unit}px`}
+                      style={{ fontSize: `${9.5 * unit}px` }}
+                      className="fill-muted-foreground font-normal"
+                    >
+                      {t.peran}
+                    </tspan>
                   </text>
                 </g>
               ))}
-          </svg>
+              </g>
+            </svg>
 
-          {/* Kontrol zoom */}
-          <div className="border-border bg-background/90 absolute top-6 right-6 flex flex-col overflow-hidden rounded-xl border shadow-sm backdrop-blur-sm sm:top-8 sm:right-8">
-            <button
-              type="button"
-              onClick={() => zoomKe(1.4)}
-              disabled={view.s >= S_MAX - 0.001}
-              aria-label="Perbesar peta"
-              className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 items-center justify-center transition-colors disabled:opacity-35"
-            >
-              <ZoomIn className="size-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => zoomKe(1 / 1.4)}
-              disabled={view.s <= S_MIN + 0.001}
-              aria-label="Perkecil peta"
-              className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 items-center justify-center border-t border-border/60 transition-colors disabled:opacity-35"
-            >
-              <ZoomOut className="size-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={reset}
-              disabled={view.s <= S_MIN + 0.001}
-              aria-label="Kembalikan tampilan peta"
-              className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 items-center justify-center border-t border-border/60 transition-colors disabled:opacity-35"
-            >
-              <RotateCcw className="size-4" aria-hidden="true" />
-            </button>
-          </div>
+            {/* Readout provinsi (hover/pilih) — chip melayang, menggantikan bar header */}
+        <span
+          aria-live="polite"
+          className={cn(
+            'label-mono bg-background/80 border-border/60 pointer-events-none absolute top-4 left-4 rounded-full border px-3 py-1.5 backdrop-blur-sm transition-opacity duration-300 sm:top-6 sm:left-6',
+            info ? 'opacity-100' : 'opacity-0',
+          )}
+        >
+          {info ? (
+            <span className={cn(kaltimTerpilih ? 'text-accent-ikn' : 'text-foreground')}>
+              {info}
+              {infoPulau ? ` · ${infoPulau}` : ''}
+            </span>
+          ) : (
+            '\u00A0'
+          )}
+        </span>
 
-          {/* Petunjuk zoom (hanya saat belum di-zoom) */}
-          <span
-            className={cn(
-              'label-mono text-muted-foreground pointer-events-none absolute bottom-6 left-6 flex items-center gap-1.5 transition-opacity duration-300 sm:bottom-8 sm:left-8',
-              view.s > 1.001 ? 'opacity-0' : 'opacity-100',
-            )}
+        {/* Kontrol zoom */}
+        <div className="border-border bg-background/90 absolute top-4 right-4 flex flex-col overflow-hidden rounded-xl border shadow-sm backdrop-blur-sm sm:top-6 sm:right-6">
+          <button
+            type="button"
+            onClick={() => zoomKe(1.4)}
+            disabled={view.s >= S_MAX - 0.001}
+            aria-label="Perbesar peta"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 items-center justify-center transition-colors disabled:opacity-35"
           >
-            <Move className="size-3.5" aria-hidden="true" />
-            Scroll untuk zoom · seret untuk geser
-          </span>
+            <ZoomIn className="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => zoomKe(1 / 1.4)}
+            disabled={view.s <= S_MIN + 0.001}
+            aria-label="Perkecil peta"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 items-center justify-center border-t border-border/60 transition-colors disabled:opacity-35"
+          >
+            <ZoomOut className="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={reset}
+            disabled={view.s <= S_MIN + 0.001}
+            aria-label="Kembalikan tampilan peta"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 items-center justify-center border-t border-border/60 transition-colors disabled:opacity-35"
+          >
+            <RotateCcw className="size-4" aria-hidden="true" />
+          </button>
         </div>
 
-        {/* Baris fakta */}
-        {fakta.length ? (
-          <ul className="border-border/60 grid grid-cols-2 gap-x-6 gap-y-3 border-t px-5 py-4 lg:grid-cols-4">
-            {fakta.map((f) => (
-              <li key={f.label}>
-                <span className="text-foreground block font-mono text-lg font-semibold tabular-nums">
-                  {f.nilai}
-                </span>
-                <span className="label-mono text-muted-foreground mt-0.5 block text-xs">
-                  {f.label}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {/* Daftar titik + toggle lapisan */}
-        <div className="border-border/60 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t px-5 py-3">
-          <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-            {semuaTitik.map((t) => (
-              <li key={t.nama} className="flex items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'size-2 shrink-0 rounded-full',
-                    t.utama ? 'bg-accent-ikn' : t.lama ? 'bg-muted-foreground' : 'bg-foreground/50',
-                  )}
-                />
-                <span className="text-muted-foreground text-xs">
-                  <span className="text-foreground font-medium">{t.nama}</span>
-                  {' — '}
-                  {t.peran}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="flex items-center gap-1.5">
-            {[
-              ['pulau', 'Pulau'],
-              ['khatulistiwa', 'Khatulistiwa'],
-            ].map(([kunci, label]) => (
-              <button
-                key={kunci}
-                type="button"
-                onClick={() => toggleLapis(kunci)}
-                aria-pressed={lapis[kunci]}
-                className={cn(
-                  'label-mono rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                  lapis[kunci]
-                    ? 'border-accent-ikn/40 bg-accent-ikn/10 text-accent-ikn'
-                    : 'border-border text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        {/* Petunjuk zoom — hilang setelah interaksi pertama */}
+        <span
+          className={cn(
+            'label-mono text-muted-foreground bg-background/80 border-border/60 pointer-events-none absolute bottom-4 left-4 flex items-center gap-1.5 rounded-full border px-3 py-1.5 backdrop-blur-sm transition-opacity duration-300 sm:bottom-6 sm:left-6',
+            pernahInteraksi ? 'opacity-0' : 'opacity-100',
+          )}
+        >
+          <Move className="size-3.5" aria-hidden="true" />
+          Scroll untuk zoom · seret untuk geser
+        </span>
+            </div>
         </div>
       </div>
 
       {keterangan ? (
-        <figcaption className="text-muted-foreground mt-3 text-sm text-pretty">
+        <figcaption className="text-muted-foreground mt-4 text-sm text-pretty">
           {keterangan}
         </figcaption>
       ) : null}

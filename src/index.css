@@ -120,6 +120,8 @@
   --animate-halo-napas: halo-napas 14s ease-in-out infinite;
   /* Ticker mono di bawah hero: lintasan tak berujung (dipakai hemat, satu bilah). */
   --animate-marquee: marquee 46s linear infinite;
+  /* Sapuan terang berjalan sepanjang garis Jakarta→IKN di peta. */
+  --animate-garis-shimmer: garis-shimmer 7s linear infinite;
 
   @keyframes float {
     0%,
@@ -221,6 +223,19 @@
       transform: translateX(-50%);
     }
   }
+
+  /* Shimmer garis peta: segmen terang pendek berjalan sepanjang garis
+     Jakarta→IKN (dashoffset bergerak). Kontras rendah & pelan agar peta
+     tetap tenang — hanya memberi rasa "mengalir" pada garis pemindahan. */
+  @keyframes garis-shimmer {
+    0% {
+      stroke-dashoffset: 1;
+    }
+    55%,
+    100% {
+      stroke-dashoffset: -1;
+    }
+  }
 }
 @layer base {
   * {
@@ -265,6 +280,7 @@
     .animate-pulse-ring,
     .animate-shimmer,
     .animate-marquee,
+    .animate-garis-shimmer,
     .logomark-draw,
     .logomark-pop {
       animation: none !important;
