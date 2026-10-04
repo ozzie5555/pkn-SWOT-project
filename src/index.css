@@ -236,6 +236,35 @@
       stroke-dashoffset: -1;
     }
   }
+
+  /* Shimmer keliling pulau: sapuan terang menyusuri garis batas provinsi,
+     loop terus-menerus (dash pendek bergerak sepanjang path). Path pendek &
+     panjang diperlakukan sama via pathLength=1. Delay/arah diatur inline per
+     provinsi (lihat PetaIndonesia) agar geraknya organik, tidak seragam. */
+  @keyframes pulau-shimmer {
+    0% {
+      stroke-dashoffset: 1;
+    }
+    85%,
+    100% {
+      stroke-dashoffset: -1;
+    }
+  }
+}
+
+/* Kelas utilitas untuk shimmer batas provinsi (di luar @theme agar bisa
+   menata warna & kecepatan per varian: normal vs Kalimantan Timur). */
+.shimmer-pulau {
+  fill: none;
+  animation: pulau-shimmer 9s linear infinite;
+  stroke: var(--foreground);
+  opacity: 0.35;
+}
+
+.shimmer-kaltim {
+  stroke: var(--accent-ikn);
+  opacity: 0.75;
+  animation-duration: 6.5s;
 }
 @layer base {
   * {
@@ -281,6 +310,7 @@
     .animate-shimmer,
     .animate-marquee,
     .animate-garis-shimmer,
+    .shimmer-pulau,
     .logomark-draw,
     .logomark-pop {
       animation: none !important;

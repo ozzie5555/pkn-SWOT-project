@@ -5,6 +5,7 @@ import { Move, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import {
   IKN_TITIK,
   JAKARTA_TITIK,
+  KALTIM,
   LABEL_PROVINSI,
   PULAU,
   VIEW_BOX,
@@ -31,15 +32,12 @@ import { useInView } from '@/lib/use-in-view'
  * - Scroll / tombol +/-  : zoom ke arah kursor
  * - Seret (drag)         : geser peta
  * - Klik ganda           : perbesar
- * - Tombol reset         : kembali ke tampilan penuh
+  * - Tombol reset         : kembali ke tampilan penuh
  * - Nama provinsi otomatis muncul setelah zoom melewati ambang global
  *   (S_LABEL_PROVINSI) ditambah ambang per-provinsi (minZoom).
  *
- * Idle drift ("panorama"): saat peta terlihat, tidak di-zoom, dan tidak
- * ada interaksi, satu <g> pembungkus digeser sangat pelan (sine loop) lewat
- * rAF imperatif — TIDAK lewat React state, agar ~40 label tidak di-render
- * ulang tiap frame. Interaksi apa pun menghentikannya; drift menyala lagi
- * setelah beberapa detik idle.
+ * Catatan: peta TIDAK bergerak sendiri (tanpa auto-pan/drift) — posisi selalu
+ * stabil; yang bergerak hanya kilau shimmer pada garis batas & garis IKN.
  *
  * Akurasi: koordinat titik diverifikasi lewat georeferensi (lihat catatan di
  * src/lib/peta-data.js). Titik label provinsi dijamin berada di dalam
@@ -57,11 +55,6 @@ const S_MAX = 6
 const S_LABEL_PROVINSI = 3.2
 // Label pulau memudar sebelum label provinsi menyala (tidak saling tumpuk).
 const S_LABEL_PULAU = 2.4
-
-// --- Karakter idle drift (disetel agar terasa "hidup" tetapi tenang) ---
-const DRIFT_AMPLITUDO = 14 // unit viewBox
-const DRIFT_PERIODE_MS = 45_000 // satu ayunan penuh barat→timur→barat
-const DRIFT_JEDA_MS = 3_000 // menunggu idle selama ini sebelum drift jalan lagi
 
 const batasi = (n, min, max) => Math.min(max, Math.max(min, n))
 
@@ -92,8 +85,6 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
   const [seret, setSeret] = useState(false)
   const svgRef = useRef(null)
   const dragRef = useRef(null)
-  const driftRef = useRef(null) // <g> pembungkus lapisan peta (untuk drift)
-  const interaksiTerakhir = useRef(0)
 
   // Lebar kontainer (css px) — dipakai untuk menjaga ukuran TEKS & PENANDA
   // tetap konstan di layar. Tanpa ini, di layar sempit teks jadi sangat kecil
@@ -126,74 +117,19 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
     }
   }, [])
 
-  // --- Idle drift (rAF imperatif, tanpa re-render) ---
-  // Geser `driftRef` secara sinusoidal hanya saat: terlihat di viewport,
-  // zoom masih 1 (tampilan penuh), dan sudah idle beberapa detik.
-  useEffect(() => {
-    if (!inView) return undefined
-    const el = driftRef.current
-    if (!el) return undefined
-
-    const amanDrift = () =>
-      typeof matchMedia === 'undefined' ||
-      !matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    const jalanRaf = { id: 0 }
-    const mulai = performance.now()
-
-    const tick = (sekarang) => {
-      jalanRaf.id = requestAnimationFrame(tick)
-      const idle = sekarang - interaksiTerakhir.current >= DRIFT_JEDA_MS
-      const boleh = amanDrift() && idle
-      if (!boleh) {
-        // Melunakkan mulus ke 0 saat pause — tidak "nyangkut" di offset.
-        const sekarangTransform = el.getAttribute('transform')
-        if (sekarangTransform && sekarangTransform !== `translate(0 0)`) {
-          el.setAttribute('transform', 'translate(0 0)')
-        }
-        return
-      }
-      const t = ((sekarang - mulai) % DRIFT_PERIODE_MS) / DRIFT_PERIODE_MS
-      const offset = Math.sin(t * Math.PI * 2) * DRIFT_AMPLITUDO
-      el.setAttribute('transform', `translate(${offset.toFixed(2)} 0)`)
-    }
-    jalanRaf.id = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(jalanRaf.id)
-  }, [inView])
-
-  // Catat interaksi (untuk jeda drift). Dipanggil dari semua jalur input.
-  const tandaiInteraksi = useCallback(() => {
-    interaksiTerakhir.current = performance.now()
-  }, [])
-
-  // Pause drift saat tab tidak terlihat (hemat baterai; rAF memang berhenti,
-  // tapi ini juga mencegah lompatan offset saat kembali).
-  useEffect(() => {
-    if (typeof document === 'undefined') return undefined
-    const onVis = () => {
-      if (!document.hidden) tandaiInteraksi()
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
-  }, [tandaiInteraksi])
-
   // --- Zoom (fokus ke titik tertentu; default: tengah peta) ---
-  const zoomKe = useCallback(
-    (faktor, fokus) => {
-      setPernahInteraksi(true)
-      tandaiInteraksi()
-      setView((lama) => {
-        const s1 = batasi(lama.s * faktor, S_MIN, S_MAX)
-        if (s1 === lama.s) return lama
-        const c = fokus ?? { x: VX + VW / 2, y: VY + VH / 2 }
-        // Titik peta di bawah kursor: p = (c - t) / s. Setelah zoom, jaga c tetap.
-        const px = (c.x - lama.tx) / lama.s
-        const py = (c.y - lama.ty) / lama.s
-        return clampView({ s: s1, tx: c.x - px * s1, ty: c.y - py * s1 })
-      })
-    },
-    [tandaiInteraksi],
-  )
+  const zoomKe = useCallback((faktor, fokus) => {
+    setPernahInteraksi(true)
+    setView((lama) => {
+      const s1 = batasi(lama.s * faktor, S_MIN, S_MAX)
+      if (s1 === lama.s) return lama
+      const c = fokus ?? { x: VX + VW / 2, y: VY + VH / 2 }
+      // Titik peta di bawah kursor: p = (c - t) / s. Setelah zoom, jaga c tetap.
+      const px = (c.x - lama.tx) / lama.s
+      const py = (c.y - lama.ty) / lama.s
+      return clampView({ s: s1, tx: c.x - px * s1, ty: c.y - py * s1 })
+    })
+  }, [])
 
   // Zoom dengan roda mouse. React memasang onWheel sebagai listener PASSIVE,
   // sehingga preventDefault() di sana tidak diizinkan (halaman ikut ter-scroll).
@@ -212,7 +148,6 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
   const onPointerDown = (e) => {
     if (e.button != null && e.button !== 0) return
     setPernahInteraksi(true)
-    tandaiInteraksi()
     const rect = svgRef.current?.getBoundingClientRect()
     if (!rect?.width) return
     dragRef.current = {
@@ -238,7 +173,6 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
     const dx = e.clientX - d.x
     const dy = e.clientY - d.y
     if (Math.hypot(dx, dy) > 3) d.pindah = true
-    tandaiInteraksi()
     setView((lama) =>
       clampView({ s: lama.s, tx: d.tx + dx * d.kx, ty: d.ty + dy * d.ky }),
     )
@@ -256,7 +190,6 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
   }
 
   const reset = () => {
-    tandaiInteraksi()
     setView({ s: 1, tx: 0, ty: 0 })
   }
 
@@ -311,10 +244,7 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
                   bisaGeser ? (seret ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default',
                 )}
               >
-          {/* Pembungkus drift: digeser imperatif via rAF (lihat useEffect di atas).
-              Seluruh isi peta ikut bergeser bersama, apa pun tingkat zoom-nya —
-              saat di-zoom offset tetap 0 karena drift dijeda oleh interaksi. */}
-          <g ref={driftRef} transform="translate(0 0)">
+          <g>
             {/* ===== Lapisan TER-SKALA: hanya polygon provinsi ===== */}
             <g transform={`translate(${view.tx} ${view.ty}) scale(${view.s})`}>
               {provinsi.map((prov) => {
@@ -329,7 +259,6 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
                     onClick={() => {
                       // Abaikan klik yang ujungnya adalah seret peta.
                       if (dragRef.current?.pindah) return
-                      tandaiInteraksi()
                       setPilih((p) => (p === prov.name ? null : prov.name))
                     }}
                     className={cn(
@@ -342,6 +271,52 @@ export default function PetaIndonesia({ keterangan, fakta = [], titik = [], clas
                   />
                 )
               })}
+
+              {/* ===== Garis batas "hidup" (efek 21st.dev / reactbits) =====
+                  Dua lapisan di atas polygon — tanpa pointer event agar
+                  hover/klik provinsi tetap jalan normal. */}
+              <g aria-hidden="true" className="pointer-events-none">
+                {/* 1) Draw-in: keliling pulau menggambar diri (sekali) saat peta
+                    masuk viewport — pakai pathLength=1 agar dash animasi seragam
+                    untuk path pendek & panjang. Delay naik per provinsi (barat→timur). */}
+                {provinsi.map((p, i) => (
+                  <path
+                    key={`dam-${p.id}`}
+                    d={p.d}
+                    pathLength="1"
+                    strokeDasharray="1"
+                    className={cn(
+                      'fill-none [stroke-dashoffset:1] transition-[stroke-dashoffset] duration-[2600ms] ease-out motion-reduce:transition-none',
+                      inView && '[stroke-dashoffset:0]',
+                      p.name === KALTIM ? 'stroke-accent-ikn/80' : 'stroke-foreground/30',
+                    )}
+                    strokeWidth={(p.name === KALTIM ? 1 : 0.5) / view.s}
+                    style={{ transitionDelay: `${i * 180}ms` }}
+                  />
+                ))}
+
+                {/* 2) Ambient shimmer: sapuan terang berjalan keliling garis
+                    pantai, loop pelan. Tiap provinsi beda delay & arah jalan
+                    (reverse) supaya terasa organik, bukan robotik. */}
+                {provinsi.map((p, i) => (
+                  <path
+                    key={`shim-${p.id}`}
+                    d={p.d}
+                    pathLength="1"
+                    fill="none"
+                    strokeDasharray={`${0.06} ${0.94}`}
+                    className={cn(
+                      'shimmer-pulau motion-reduce:hidden',
+                      p.name === KALTIM ? 'shimmer-kaltim' : '',
+                    )}
+                    strokeWidth={(p.name === KALTIM ? 1.1 : 0.7) / view.s}
+                    style={{
+                      animationDelay: `${(i % 7) * 0.9}s`,
+                      animationDirection: i % 2 ? 'reverse' : 'normal',
+                    }}
+                  />
+                ))}
+              </g>
             </g>
 
             {/* ===== Lapisan TETAP-UKURAN (koordinat diproyeksikan manual) ===== */}
