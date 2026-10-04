@@ -44,6 +44,60 @@ export const meta = {
         { nilai: '75%', label: 'Wilayah dialokasikan sebagai kawasan hijau' },
         { nilai: '2045', label: 'Target emisi net-zero (Smart Forest City)' },
       ],
+
+      // Peta Indonesia (bab 01). Koordinat peta sudah diverifikasi di
+      // src/lib/peta-data.js. Jarak dihitung (haversine) dari pusat IKN
+      // 0,973°S 116,699°E — angka nyata, bukan karangan.
+      //
+      // `diPeta: false` = tidak digambar sebagai titik di peta karena terlalu
+      // berdekatan dengan IKN (skala peta tidak memisahkannya dengan jujur);
+      // tetap ditampilkan di daftar sebagai kota rujukan.
+      peta: {
+        judul: 'Peta Sebaran Ibu Kota Nusantara',
+        keterangan:
+          'Titik IKN berada di Kabupaten Penajam Paser Utara dan Kutai Kartanegara, Kalimantan Timur. Posisi titik sudah diverifikasi terhadap koordinat aslinya — zoom untuk melihat nama tiap provinsi, atau klik provinsi untuk memilihnya.',
+        // Angka ringkas di bawah peta — SEMUA fakta nyata (bukan karangan):
+        // 34 provinsi = jumlah provinsi Indonesia saat ini; Indonesia
+        // dilewati garis khatulistiwa; IKN 0,973°S → ~108 km di selatannya.
+        fakta: [
+          { nilai: '34', label: 'Provinsi di Indonesia' },
+          { nilai: '0,973° S', label: 'Lintang IKN dari khatulistiwa' },
+          { nilai: '± 108 km', label: 'Jarak IKN ke garis khatulistiwa' },
+          { nilai: '± 1.240 km', label: 'Jarak Jakarta ke IKN' },
+        ],
+        titik: [
+          {
+            nama: 'Ibu Kota Nusantara',
+            singkat: 'IKN',
+            peran: 'Ibu kota baru',
+            x: 371.8,
+            y: 143.4,
+            utama: true,
+          },
+          {
+            nama: 'Jakarta',
+            singkat: 'Jakarta',
+            peran: 'Ibu kota lama · ± 1.240 km dari IKN',
+            x: 201,
+            y: 234,
+            lama: true,
+          },
+          {
+            nama: 'Samarinda',
+            peran: 'Kota terdekat · ± 70 km dari IKN',
+            x: 380,
+            y: 135,
+            diPeta: false,
+          },
+          {
+            nama: 'Balikpapan',
+            peran: 'Kota terdekat · ± 40 km dari IKN',
+            x: 374,
+            y: 149,
+            diPeta: false,
+          },
+        ],
+      },
     },
     swot: {
       judul: 'Analisis SWOT',

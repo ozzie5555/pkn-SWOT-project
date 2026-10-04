@@ -1,6 +1,7 @@
 import { Building2, Scale, Trees } from 'lucide-react'
 
 import PanelLokasi from '@/components/PanelLokasi'
+import PetaIndonesia from '@/components/PetaIndonesia'
 import Reveal from '@/components/Reveal'
 import { Rule } from '@/components/Rule'
 import { Section, SectionHeading } from '@/components/Section'
@@ -76,6 +77,25 @@ export default function LatarBelakang() {
 
         {/* Panel lokasi tipografis: menegaskan letak ibu kota baru */}
         <PanelLokasi className="mt-14 sm:mt-16" />
+
+        {/* Peta Indonesia + titik IKN — menggantikan slider foto lama.
+            Diberi ruang judul sendiri supaya terbaca sebagai satu unit. */}
+        <div className="mt-16 sm:mt-20">
+          <div className="mb-5 flex items-center gap-4">
+            <span className="label-mono text-muted-foreground shrink-0">
+              Letak di Peta
+            </span>
+            <span aria-hidden="true" className="bg-border h-px flex-1" />
+          </div>
+          <Reveal>
+            <PetaIndonesia
+              judul={meta.section.latarBelakang.peta.judul}
+              keterangan={meta.section.latarBelakang.peta.keterangan}
+              fakta={meta.section.latarBelakang.peta.fakta}
+              titik={meta.section.latarBelakang.peta.titik}
+            />
+          </Reveal>
+        </div>
 
         {/* Tiga alasan utama — 3 kolom di desktop (kiri-tengah-kanan),
             tersusun ke bawah di mobile; pemisah hairline mengikuti arah grid */}
