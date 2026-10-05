@@ -122,9 +122,6 @@
   --animate-marquee: marquee 46s linear infinite;
   /* Sapuan terang berjalan sepanjang garis Jakarta→IKN di peta. */
   --animate-garis-shimmer: garis-shimmer 7s linear infinite;
-  /* Sheen wordmark footer: kilat lembut menyapu teks besar (sekali per ~9s,
-     sebagian besar waktu diam). */
-  --animate-sheen: sheen 9s ease-in-out infinite;
 
   @keyframes float {
     0%,
@@ -253,19 +250,6 @@
       stroke-dashoffset: -1;
     }
   }
-
-  /* Sheen wordmark: gradasi terang menyapu dari kiri ke kanan lalu diam.
-     background-position 200% → -200% pada layer 250% lebar. */
-  @keyframes sheen {
-    0%,
-    55% {
-      background-position: 200% 0;
-    }
-    85%,
-    100% {
-      background-position: -200% 0;
-    }
-  }
 }
 
 /* Kelas utilitas untuk shimmer batas provinsi (di luar @theme agar bisa
@@ -326,7 +310,7 @@
     .animate-shimmer,
     .animate-marquee,
     .animate-garis-shimmer,
-    .animate-sheen,
+    .wordmark-alir,
     .shimmer-pulau,
     .logomark-draw,
     .logomark-pop {
@@ -384,5 +368,71 @@
       transform: scale(1);
       opacity: 1;
     }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Wordmark NUSANTARA (footer) — 3 lapis: outline · fill gradient · mask
+   --------------------------------------------------------------------------- */
+
+/* Lapis outline: garis huruf tipis yang tampak "digambar" saat mask membuka.
+   alpha-foreground 10% — masih kalem, hanya memberi definisi tepi huruf. */
+.wordmark-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+/* Lapis fill: gradient hijau IKN ↔ kuningan via background-clip:text.
+   Alpha rendah (dasar ~7%, puncak ~13%) agar wordmark tetap pudar kalem —
+   tekstur latar, bukan judul. background-size 250% dianimasikan posisinya
+   oleh .wordmark-alir sehingga warna mengalir pelan sepanjang huruf. */
+.wordmark-fill {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--accent-ikn) 7%, transparent) 0%,
+    color-mix(in oklab, var(--accent-ikn) 13%, transparent) 28%,
+    color-mix(in oklab, var(--accent-brass) 12%, transparent) 50%,
+    color-mix(in oklab, var(--accent-ikn) 13%, transparent) 72%,
+    color-mix(in oklab, var(--accent-ikn) 7%, transparent) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Aliran gradient — loop terus 8 detik (pilihan: sedang). */
+.wordmark-alir {
+  animation: wordmark-alir 8s linear infinite;
+}
+
+@keyframes wordmark-alir {
+  0% {
+    background-position: 0% 0;
+  }
+  100% {
+    background-position: -250% 0;
+  }
+}
+
+/* Draw-on (mask reveal): konten tersingkap dari kiri ke kanan.
+   Dipicu lewat kelas .wordmark-terlihat (dipasang saat footer masuk
+   viewport via useInView); sebelum itu tetap tersembunyi penuh.
+   Bila prefers-reduced-motion, kelas tampil-utuh memastikan teks
+   terlihat seketika tanpa animasi. */
+.wordmark-clip {
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wordmark-terlihat {
+  clip-path: inset(0 0 0 0);
+}
+
+/* Reduced motion: tanpa aliran; teks langsung utuh tanpa mask tertutup. */
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-clip {
+    clip-path: inset(0 0 0 0);
+    transition: none;
   }
 }

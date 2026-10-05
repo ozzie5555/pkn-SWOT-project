@@ -3,6 +3,8 @@ import { ArrowUp } from 'lucide-react'
 import Logomark from '@/components/Logomark'
 import { Rule } from '@/components/Rule'
 import { meta } from '@/data'
+import { useInView } from '@/lib/use-in-view'
+import { cn } from '@/lib/utils'
 
 /**
  * Footer profesional — adaptasi pola "Footer with Navigation Grid"
@@ -14,7 +16,9 @@ import { meta } from '@/data'
  *           Referensi dibuat grid mini 2 kolom (item ganjil di kolom kiri,
  *           genap di kanan) + judul panjang di-truncate dengan tooltip,
  *           sehingga tingginya tetap sejajar dengan kolom lain.
- *   Zona 2: wordmark besar NUSANTARA dengan sheen halus (reactbits Shiny Text)
+ *   Zona 2: wordmark besar NUSANTARA "hidup" — 3 lapis (outline · gradient
+ *           mengalir · mask draw-on) saat masuk viewport, lalu warna
+ *           mengalir terus (loop 8s). Tetap pudar kalem (alpha 7–13%).
  *   Zona 3: bottom bar — kredit kiri, kembali ke atas kanan
  *
  * Semua anchor mengarah ke section yang benar; hover konsisten (muted →
@@ -22,6 +26,7 @@ import { meta } from '@/data'
  */
 export default function Footer() {
   const { deskripsi, jelajahi, sumber, kredit } = meta.footer
+  const [refWordmark, terlihat] = useInView({ threshold: 0.3 })
 
   // Referensi dibagi ke 2 kolom mini agar 10 item tetap pendek & sejajar:
   // item berindeks ganjil → kolom kiri, genap → kolom kanan.
@@ -107,15 +112,29 @@ export default function Footer() {
 
         <Rule className="mt-14" />
 
-        {/* ===== Zona 2: wordmark besar + sheen halus ===== */}
-        <div aria-hidden="true" className="mt-10 lg:mt-12">
+        {/* ===== Zona 2: wordmark besar "hidup" (3 lapis) =====
+            Lapisan 1 outline (garis huruf) · Lapisan 2 fill gradient hijau
+            IKN ↔ kuningan yang mengalir (loop 8s) · keduanya dibungkus mask
+            yang tersingkap kiri→kanan sekali saat footer masuk viewport.
+            Tetap pudar kalem (alpha 7–13%) — tekstur, bukan judul.
+            reduced-motion → langsung tampil utuh statis. */}
+        <div ref={refWordmark} aria-hidden="true" className="mt-10 lg:mt-12">
           <span className="relative block text-center">
-            <span className="text-foreground/[0.07] block text-[15vw] leading-[0.8] font-semibold tracking-tighter select-none sm:text-[13vw]">
+            {/* Lapis 1 — outline: garis huruf tipis, tampak "digambar" */}
+            <span className="wordmark-outline block text-[15vw] leading-[0.8] font-semibold tracking-tighter select-none sm:text-[13vw]">
               NUSANTARA
             </span>
-            {/* Sapuan sheen lewat wordmark (diam ~55% waktu, menyapu ~3s)
-                — pola reactbits "Shiny Text", senada bahasa shimmer peta */}
-            <span className="animate-sheen absolute inset-0 bg-[linear-gradient(105deg,transparent_40%,rgba(255,255,255,0.5)_50%,transparent_60%)] bg-[length:250%_100%] bg-no-repeat" />
+
+            {/* Lapis 2 — fill gradient mengalir + draw-on mask (sama tempat,
+                absolute) */}
+            <span
+              className={cn(
+                'wordmark-fill wordmark-alir absolute inset-0 block text-[15vw] leading-[0.8] font-semibold tracking-tighter select-none sm:text-[13vw]',
+                terlihat ? 'wordmark-terlihat' : 'wordmark-clip',
+              )}
+            >
+              NUSANTARA
+            </span>
           </span>
         </div>
 
