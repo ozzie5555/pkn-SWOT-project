@@ -117,7 +117,9 @@ export default function DiskusiKomentar() {
 
   // State form pengirim
   const [nama, setNama] = useState('')
-  const [kategori, setKategori] = useState(kategoriOpsi[0] || 'Pertanyaan')
+  // Kategori tidak lagi diminta ke pengirim — selalu pakai nilai pertama
+  // (tetap dikirim agar filter & kolom DB tetap konsisten).
+  const kategori = kategoriOpsi[0] || 'Pertanyaan'
   const [pesan, setPesan] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -296,7 +298,16 @@ export default function DiskusiKomentar() {
         const { error } = await supabase.from('komentar').delete().eq('id', id)
         if (error) throw error
       } catch (err) {
-        console.error('Gagal menghapus komentar dari Supabase:', err)
+        // Tampilkan detail error agar kegagalan (mis. RLS menolak DELETE)
+        // tidak terasa "tombol mati diam-diam" di UI.
+        console.error('Gagal menghapus komentar dari Supabase:', err?.message ?? err)
+        // Kembalikan komentar ke daftar (delete gagal) supaya data tetap jujur.
+        setKomentarList((prev) =>
+          prev.some((k) => k.id === id) ? prev : [komentarMauDihapus, ...prev],
+        )
+        setHapusLoading(false)
+        setKomentarMauDihapus(null)
+        return
       }
     }
 
@@ -450,33 +461,6 @@ export default function DiskusiKomentar() {
                     onChange={(e) => setNama(e.target.value)}
                     className="mt-2 w-full rounded-lg border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-accent-ikn focus:ring-1 focus:ring-accent-ikn focus:outline-none"
                   />
-                </div>
-
-                {/* Pemilihan Kategori */}
-                <div>
-                  <label className="label-mono text-muted-foreground block">
-                    Kategori Tanggapan
-                  </label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {kategoriOpsi.map((kat) => {
-                      const aktif = kategori === kat
-                      return (
-                        <button
-                          key={kat}
-                          type="button"
-                          onClick={() => setKategori(kat)}
-                          className={cn(
-                            'rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors',
-                            aktif
-                              ? 'bg-foreground text-background'
-                              : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground',
-                          )}
-                        >
-                          {kat}
-                        </button>
-                      )
-                    })}
-                  </div>
                 </div>
 
                 {/* Pesan Komentar */}
@@ -782,7 +766,8 @@ export default function DiskusiKomentar() {
               Akses Moderator
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-center text-xs">
-              Masukkan PIN untuk mengaktifkan tombol moderasi, jawab pertanyaan, sembunyikan, & hapus komentar.
+              Masukkan PIN untuk mengaktifkan mode moderator: jawab, sembunyikan,
+              tampilkan, & hapus komentar apa pun (termasuk yang sudah dijawab).
             </DialogDescription>
           </DialogHeader>
 
@@ -921,17 +906,7 @@ export default function DiskusiKomentar() {
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              {komentarDijawab?.jawaban ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTeksJawaban('')
-                  }}
-                  className="text-muted-foreground hover:text-destructive text-xs transition-colors"
-                >
-                  Kosongkan Jawaban
-                </button>
-              ) : <span />}
+              <span />
 
               <div className="flex items-center gap-2">
                 <Button
@@ -946,7 +921,7 @@ export default function DiskusiKomentar() {
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={simpanJawabLoading || !teksJawaban.trim()}
+                  disabled={simpanJawabLoading}
                   className="rounded-full"
                 >
                   {simpanJawabLoading ? (
@@ -957,7 +932,9 @@ export default function DiskusiKomentar() {
                   ) : (
                     <>
                       <Check className="mr-1.5 size-3.5" />
-                      Simpan Jawaban
+                      {teksJawaban.trim()
+                        ? 'Simpan Jawaban'
+                        : 'Hapus Balasan'}
                     </>
                   )}
                 </Button>

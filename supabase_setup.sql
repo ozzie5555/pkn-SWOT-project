@@ -21,7 +21,7 @@ ADD COLUMN IF NOT EXISTS jawaban TEXT DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS disembunyikan BOOLEAN DEFAULT false NOT NULL;
 
 -- 3. Aktifkan Row Level Security (RLS)
-ALTER TABLE public.komentar ENABL2E ROW LEVEL SECURITY;
+ALTER TABLE public.komentar ENABLE ROW LEVEL SECURITY;
 
 -- 4. Hapus policy lama jika ada (agar aman saat di-run ulang)
 DROP POLICY IF EXISTS "Siapapun bisa membaca komentar" ON public.komentar;

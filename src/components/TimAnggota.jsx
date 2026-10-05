@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * Section "Tim Penyusun" (bab 05) — adaptasi konsep "Team Showcase"
- * (grid potret staggered + daftar nama interaktif yang tersinkron).
+ * (kolase potret + daftar nama interaktif yang tersinkron).
  *
  * Cara kerja sinkron:
  * - Satu state `aktif` (index anggota). Hover/focus pada kartu potret ATAU
@@ -21,12 +21,17 @@ import { cn } from '@/lib/utils'
  * - `?efek=none` (flag `anggota` mati) → grid statis: potret selalu berwarna,
  *   tanpa highlight sinkron — halaman kembali minimal.
  *
- * Foto: `foto: null` di data.js → monogram inisial (tanpa request gambar,
- * jadi tidak ada 404). Saat foto disiapkan di public/anggota/, isi field
- * `foto` — bila file gagal dimuat, onError otomatis jatuh ke monogram.
- *
- * Aksesibilitas/performa: img lazy+async dengan width/height eksplisit
- * (anti-CLS); transisi menghormati prefers-reduced-motion.
+ * ── CARA MEMASANG FOTO ANGGOTA ────────────────────────────────────────────
+ * 1. Letakkan foto di folder `src/assets/anggota/`. Ekstensi BEBAS:
+ *    .webp / .jpg / .jpeg / .png — bahkan boleh campur.
+ *    Nama berkas fleksibel — cocok dengan salah satu pola:
+ *      · nama lengkap   → amaris-wursita.webp
+ *      · dua kata nama  → krisna-mandala.jpg
+ *      · satu kata ≥4   → restu.jpg
+ * 2. Selesai — tidak ada saklar & path manual. Foto yang belum ada →
+ *    kartu tetap monogram inisial (tanpa 404); berkas rusak → monogram juga.
+ * Spesifikasi ideal: rasio 2:3 (mis. 600×900), < 200 KB per foto.
+ * ──────────────────────────────────────────────────────────────────────────
  */
 
 // Kolase "berantakan yang disengaja": tiap kartu punya preset miring/geser/
@@ -41,9 +46,9 @@ const SCATTER = [
   'rotate-[-3deg] scale-100 lg:-translate-x-1 lg:translate-y-2', // Amaris (kol 1)
   'rotate-[2.5deg] scale-[1.05] lg:translate-x-2 lg:-translate-y-2', // Krisna (kol 3)
   'rotate-[-2deg] scale-[0.95] lg:-translate-x-1 lg:translate-y-5', // Lathifa (kol 1)
-  'rotate-[3deg] scale-[1.03] lg:translate-x-1 lg:-translate-y-1', // Lukas (kol 3)
+  'rotate-[3deg] scale-[1.03] lg:translate-x-1 lg:-translate-y-1', // Lukas (kol 4)
   'rotate-[-1.5deg] scale-[1.02] lg:-translate-x-2 lg:-translate-y-3', // Rieva (kol 2)
-  'rotate-[2deg] scale-[0.97] lg:translate-x-2 lg:translate-y-4', // Restu (kol 4)
+  'rotate-[2deg] scale-[0.97] lg:translate-x-2 lg:translate-y-4', // Restu (kol 3)
   'rotate-[-2.5deg] scale-[1.04] lg:translate-x-1 lg:translate-y-1', // Satrya (kol 4)
   'rotate-[1.5deg] scale-[0.96] lg:-translate-x-2 lg:translate-y-5', // Theo (kol 2)
 ]
@@ -63,8 +68,8 @@ const SCATTER_AKTIF = 'z-20 rotate-0 scale-[1.06] lg:-translate-y-2'
 const KOLOM = [
   [0, 2], // Amaris + Lathifa
   [4, 7], // Rieva + Theo
-  [1, 3], // Krisna + Lukas
-  [5, 6], // Restu + Satrya
+  [1, 5], // Krisna + Restu
+  [3, 6], // Lukas + Satrya
 ]
 const OFFSET_KOLOM = ['', 'lg:mt-7', 'lg:mt-2', 'lg:mt-9']
 
@@ -218,13 +223,17 @@ export default function TimAnggota() {
 }
 
 /**
- * Kartu potret satu anggota — foto asli bila tersedia, monogram bila tidak.
+ * Kartu potret satu anggota — foto asli bila GUNAKAN_FOTO aktif dan berkas
+ * tersedia, monogram bila tidak. Path foto dihitung otomatis dari nama
+ * (slug) — tidak perlu mengisi field `foto` per anggota.
  * `tampilkanNama` hanya dipakai di mobile (desktop: nama ada di daftar kanan).
  * Semua kartu berukuran seragam (rasio potret 2:3) — rasa kolase tetap hadir
  * lewat miring/geser/skala per kartu, bukan dari perbedaan ukuran.
  */
 function PotretAnggota({ orang, nyala, interaktif, nomor, onAktif, onPadam, tampilkanNama }) {
   const [gambarGagal, setGambarGagal] = useState(false)
+  // Cari foto otomatis dari nama (slug lengkap / 2 kata / 1 kata); fallback
+  // ke field `foto` eksplisit di data.js bila ada. Tanpa foto → monogram.
   const fotoPath = cariFotoAnggota(orang.nama, orang.foto)
   const pakaiFoto = Boolean(fotoPath) && !gambarGagal
   // Rasio seragam untuk semua kartu

@@ -9,7 +9,11 @@ import { meta } from '@/data'
  * (shadcnui-blocks) + "Large Name Footer" (Spectrum UI), dengan bahasa
  * desain editorial milik halaman ini:
  *
- *   Zona 1: identitas (logo + tagline) | grid navigasi 2 kolom | sumber
+ *   Zona 1: TIGA KOLOM SEJAJAR —
+ *           identitas (logo + tagline) | Jelajahi | Sumber & Referensi.
+ *           Referensi dibuat grid mini 2 kolom (item ganjil di kolom kiri,
+ *           genap di kanan) + judul panjang di-truncate dengan tooltip,
+ *           sehingga tingginya tetap sejajar dengan kolom lain.
  *   Zona 2: wordmark besar NUSANTARA dengan sheen halus (reactbits Shiny Text)
  *   Zona 3: bottom bar — kredit kiri, kembali ke atas kanan
  *
@@ -19,13 +23,18 @@ import { meta } from '@/data'
 export default function Footer() {
   const { deskripsi, jelajahi, sumber, kredit } = meta.footer
 
+  // Referensi dibagi ke 2 kolom mini agar 10 item tetap pendek & sejajar:
+  // item berindeks ganjil → kolom kiri, genap → kolom kanan.
+  const kolomKiri = sumber.items.filter((_, i) => i % 2 === 0)
+  const kolomKanan = sumber.items.filter((_, i) => i % 2 === 1)
+
   return (
     <footer className="paper-grain relative overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 pt-16 lg:px-10 lg:pt-20">
-        {/* ===== Zona 1: identitas + navigasi + sumber ===== */}
+        {/* ===== Zona 1: identitas | Jelajahi | Sumber — sejajar ===== */}
         <div className="grid gap-12 lg:grid-cols-12">
           {/* Kolom identitas */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-4">
             <div className="flex items-center gap-3">
               <Logomark animated={false} className="text-primary size-8" />
               <div className="leading-none">
@@ -35,15 +44,15 @@ export default function Footer() {
                 </p>
               </div>
             </div>
-            <p className="text-muted-foreground mt-5 max-w-sm text-sm leading-relaxed text-pretty">
+            <p className="text-muted-foreground mt-6 max-w-sm text-sm leading-relaxed text-pretty">
               {deskripsi}
             </p>
           </div>
 
-          {/* Kolom navigasi (grid internal) */}
-          <div className="lg:col-span-4">
+          {/* Kolom navigasi */}
+          <div className="lg:col-span-3">
             <h2 className="label-mono text-muted-foreground">{jelajahi.judul}</h2>
-            <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+            <ul className="mt-5 space-y-3">
               {jelajahi.items.map((item) => (
                 <li key={item.href}>
                   <a
@@ -60,26 +69,39 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Kolom sumber & referensi */}
-          <div className="lg:col-span-3">
+          {/* Kolom sumber & referensi — grid mini 2 kolom, sejajar dengan lainnya */}
+          <div className="lg:col-span-5">
             <h2 className="label-mono text-muted-foreground">{sumber.judul}</h2>
-            <p className="text-muted-foreground mt-4 text-xs leading-relaxed text-pretty">
-              {sumber.catatan}
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {sumber.items.map((s) => (
-                <li key={s.href}>
-                  <a
-                    href={s.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-foreground text-xs underline decoration-border underline-offset-4 transition-colors hover:decoration-current"
-                  >
-                    {s.label}
-                  </a>
-                </li>
+            {sumber.catatan ? (
+              <p className="text-muted-foreground mt-3 text-xs leading-relaxed text-pretty">
+                {sumber.catatan}
+              </p>
+            ) : null}
+
+            <div className="mt-5 grid grid-cols-2 gap-x-8">
+              {[kolomKiri, kolomKanan].map((kolom, ci) => (
+                <ul key={ci} className="space-y-3">
+                  {kolom.map((s) => (
+                    <li key={s.href}>
+                      <a
+                        href={s.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={s.label}
+                        className="text-muted-foreground hover:text-foreground group flex items-baseline gap-2 text-xs leading-snug transition-colors"
+                      >
+                        <span className="text-primary/50 group-hover:text-primary label-mono shrink-0 text-[0.65rem] tabular-nums transition-colors">
+                          {String(sumber.items.indexOf(s) + 1).padStart(2, '0')}
+                        </span>
+                        <span className="truncate underline decoration-border underline-offset-4 transition-colors group-hover:decoration-current">
+                          {s.label}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               ))}
-            </ul>
+            </div>
           </div>
         </div>
 
